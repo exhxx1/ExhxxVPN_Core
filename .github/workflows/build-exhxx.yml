@@ -24,14 +24,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # إعطاء صلاحية التشغيل للملف الذكي بداخل مجلد V2rayNG
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      working-directory: V2rayNG
-
-    # تشغيل البناء باستخدام الملف الذكي ليقوم بتحميل النسخة المتوافقة تلقائياً
-    - name: Build APK with Wrapper
-      run: ./gradlew assembleDebug
+    # استخدام محرك Gradle المثبت مسبقاً في جيثب مباشرة
+    - name: Build APK with Global Gradle
+      run: gradle assembleDebug
       working-directory: V2rayNG
 
     - name: Upload APK
