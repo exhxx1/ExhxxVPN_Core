@@ -13,8 +13,7 @@ jobs:
       with:
         submodules: 'recursive'
 
-    # 1. جلب أحدث إصدار مستقر من لغة Go لمنع التضارب
-    - name: Setup Go (Latest Stable)
+    - name: Setup Go (Stable)
       uses: actions/setup-go@v5
       with:
         go-version: 'stable'
@@ -25,10 +24,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 2. بناء المحرك بدقة مع توجيه المسار لمترجم الأندرويد الصريح
+    # الضربة القاضية: تحديث مكتبة الشبكات المعطوبة والبناء للمحرك المتطابق
     - name: Compile Exact Go Engine (ARM64 Only)
       run: |
-        # استدعاء مسار NDK الموجود مسبقاً في سيرفرات جيثب
         export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/* | tail -1)
         
         go install golang.org/x/mobile/cmd/gomobile@latest
@@ -36,16 +34,16 @@ jobs:
         export PATH=$PATH:$(go env GOPATH)/bin
         gomobile init
         
-        # سحب كود المحرك الحقيقي
-        rm -rf V2rayNG/libv2ray
-        git clone https://github.com/2dust/AndroidLibXrayLite.git V2rayNG/libv2ray
-        
+        # 1. الدخول للمحرك الأصلي المتطابق مع التطبيق (بدون حذفه!)
         mkdir -p V2rayNG/app/libs
         cd V2rayNG/libv2ray
-        go mod download
         
-        # بناء المحرك لمعمارية 64 بت (مع إظهار التفاصيل -x في حال الخطأ)
-        gomobile bind -x -v -androidapi 21 -target=android/arm64 -javapkg=libv2ray -o ../app/libs/libv2ray.aar .
+        # 2. تحديث مكتبة الشبكات لإصلاح خطأ (zoneCache) مع الإصدارات الحديثة
+        go get github.com/wlynxg/anet@latest
+        go mod tidy
+        
+        # 3. البناء لمعمارية جهازك فقط
+        gomobile bind -v -androidapi 21 -target=android/arm64 -javapkg=libv2ray -o ../app/libs/libv2ray.aar .
 
     - name: Force Gradle to build ARM64
       run: |
