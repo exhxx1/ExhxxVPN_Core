@@ -13,10 +13,11 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - name: Setup Go
+    # 1. جلب أحدث إصدار مستقر من لغة Go لمنع التضارب
+    - name: Setup Go (Latest Stable)
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: 'stable'
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -24,9 +25,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # الضربة القاضية والسريعة: بناء المحرك لمعمارية 64 بت حصراً
+    # 2. بناء المحرك بدقة مع توجيه المسار لمترجم الأندرويد الصريح
     - name: Compile Exact Go Engine (ARM64 Only)
       run: |
+        # استدعاء مسار NDK الموجود مسبقاً في سيرفرات جيثب
+        export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/* | tail -1)
+        
         go install golang.org/x/mobile/cmd/gomobile@latest
         go install golang.org/x/mobile/cmd/gobind@latest
         export PATH=$PATH:$(go env GOPATH)/bin
@@ -36,14 +40,13 @@ jobs:
         rm -rf V2rayNG/libv2ray
         git clone https://github.com/2dust/AndroidLibXrayLite.git V2rayNG/libv2ray
         
-        # بناء المحرك المتطابق مع جهازك فقط
         mkdir -p V2rayNG/app/libs
         cd V2rayNG/libv2ray
         go mod download
-        # السر هنا: إضافة target=android/arm64
-        gomobile bind -v -androidapi 21 -target=android/arm64 -javapkg=libv2ray -o ../app/libs/libv2ray.aar .
+        
+        # بناء المحرك لمعمارية 64 بت (مع إظهار التفاصيل -x في حال الخطأ)
+        gomobile bind -x -v -androidapi 21 -target=android/arm64 -javapkg=libv2ray -o ../app/libs/libv2ray.aar .
 
-    # توجيه مصنع الأندرويد لبناء معمارية 64 بت فقط
     - name: Force Gradle to build ARM64
       run: |
         sed -i 's/abiFilters.addAll.*/abiFilters.addAll(arrayOf("arm64-v8a"))/g' V2rayNG/app/build.gradle.kts || true
