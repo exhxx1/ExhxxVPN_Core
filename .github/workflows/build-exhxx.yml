@@ -16,24 +16,29 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22' # تحديث إصدار Go ليتوافق مع أحدث المحركات
-
-    # تنصيب أداة Gomobile وإضافتها لمسار النظام
-    - name: Install Gomobile Translator
-      run: |
-        go install golang.org/x/mobile/cmd/gomobile@latest
-        go install golang.org/x/mobile/cmd/gobind@latest
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
-    # تهيئة الأداة لربط محركات Go بنظام الأندرويد
-    - name: Initialize Gomobile
-      run: gomobile init
+        go-version: '1.22'
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
+
+    # الضربة القاضية: تحويل كود Go إلى محرك أندرويد بصيغة AAR وحقنه بالتطبيق
+    - name: Compile Go Engine (libv2ray.aar)
+      run: |
+        go install golang.org/x/mobile/cmd/gomobile@latest
+        go install golang.org/x/mobile/cmd/gobind@latest
+        export PATH=$PATH:$(go env GOPATH)/bin
+        gomobile init
+        
+        # إنشاء مجلد المكتبات داخل التطبيق
+        mkdir -p V2rayNG/app/libs
+        
+        # الدخول لمجلد المحرك وبناؤه
+        cd V2rayNG/libv2ray
+        go mod download
+        gomobile bind -v -androidapi 21 -target=android -javapkg=libv2ray -o ../app/libs/libv2ray.aar .
 
     - name: Build APK with Global Gradle
       run: gradle assembleDebug
