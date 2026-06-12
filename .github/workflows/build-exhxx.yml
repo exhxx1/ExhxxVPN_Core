@@ -24,7 +24,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # الضربة القاضية: تحديث مكتبة الشبكات المعطوبة والبناء للمحرك المتطابق
+    # الضربة القاضية المزدوجة: سحب المحرك، تحديث المكتبة، ثم البناء
     - name: Compile Exact Go Engine (ARM64 Only)
       run: |
         export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/* | tail -1)
@@ -34,15 +34,19 @@ jobs:
         export PATH=$PATH:$(go env GOPATH)/bin
         gomobile init
         
-        # 1. الدخول للمحرك الأصلي المتطابق مع التطبيق (بدون حذفه!)
+        # 1. سحب كود المحرك الحقيقي
+        rm -rf V2rayNG/libv2ray
+        git clone https://github.com/2dust/AndroidLibXrayLite.git V2rayNG/libv2ray
+        
+        # 2. الدخول للمحرك
         mkdir -p V2rayNG/app/libs
         cd V2rayNG/libv2ray
         
-        # 2. تحديث مكتبة الشبكات لإصلاح خطأ (zoneCache) مع الإصدارات الحديثة
+        # 3. تحديث مكتبة الشبكات لإصلاح خطأ (zoneCache)
         go get github.com/wlynxg/anet@latest
         go mod tidy
         
-        # 3. البناء لمعمارية جهازك فقط
+        # 4. بناء المحرك لمعمارية جهازك
         gomobile bind -v -androidapi 21 -target=android/arm64 -javapkg=libv2ray -o ../app/libs/libv2ray.aar .
 
     - name: Force Gradle to build ARM64
